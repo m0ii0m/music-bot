@@ -1,0 +1,13 @@
+# Always use LF line endings, including on Windows checkouts:
+# the Dockerfile and compose files run on Linux.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.jar binary
