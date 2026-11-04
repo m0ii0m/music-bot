@@ -1,0 +1,39 @@
+services:
+  music-bot:
+    image: m0ii0m69/music-bot:latest
+    container_name: music-bot
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - LAVALINK_HOST=lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD}
+    networks:
+      - internal
+    depends_on:
+      - lavalink
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4-alpine
+    container_name: music-bot_lavalink
+    restart: unless-stopped
+    user: "996:111"
+    environment:
+      - _JAVA_OPTIONS=-Xmx512m
+      - SERVER_PORT=2333
+      - SERVER_ADDRESS=0.0.0.0
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD}
+      # The built-in YouTube source is deprecated: use the official youtube plugin instead.
+      - LAVALINK_SERVER_SOURCES_YOUTUBE=false
+      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.2
+      - PLUGINS_YOUTUBE_ENABLED=true
+      - PLUGINS_YOUTUBE_ALLOWSEARCH=true
+    volumes:
+      - /mnt/Stockage1/Ludovic/docker/data/music-bot/lavalink-plugins:/opt/Lavalink/plugins
+    networks:
+      - internal
+
+networks:
+  internal:

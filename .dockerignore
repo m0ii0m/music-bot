@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.docker-data/
+.git
+node_modules/
+dist/
+coverage/
+*.log
