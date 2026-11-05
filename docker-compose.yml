@@ -2,6 +2,8 @@ services:
   music-bot:
     build: .
     container_name: music-bot
+    # Login fails (and the process exits) on transient DNS errors, e.g. while a VPN reconnects.
+    restart: unless-stopped
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
@@ -11,7 +13,8 @@ services:
     networks:
       - internal
     depends_on:
-      - lavalink
+      lavalink:
+        condition: service_healthy
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4-alpine
@@ -24,11 +27,51 @@ services:
       - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD}
       # The built-in YouTube source is deprecated: use the official youtube plugin instead.
       - LAVALINK_SERVER_SOURCES_YOUTUBE=false
-      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.2
+      # 1.18.2 can no longer play most videos (YouTube serves SABR-only formats since 2026-08):
+      # use a snapshot of youtube-source main until a fixed release ships.
+      # See https://github.com/lavalink-devs/youtube-source/issues/240
+      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:2be8e542d3f6f178e048dca565892684c2e40177
+      - LAVALINK_PLUGINS_0_SNAPSHOT=true
       - PLUGINS_YOUTUBE_ENABLED=true
       - PLUGINS_YOUTUBE_ALLOWSEARCH=true
+      # Playback tries clients in order. TV is the only OAuth client and plays first;
+      # the others handle search (TV cannot search).
+      - PLUGINS_YOUTUBE_CLIENTS_0=MUSIC
+      - PLUGINS_YOUTUBE_CLIENTS_1=TV
+      - PLUGINS_YOUTUBE_CLIENTS_2=ANDROID_VR
+      - PLUGINS_YOUTUBE_CLIENTS_3=WEB
+      - PLUGINS_YOUTUBE_CLIENTS_4=WEBEMBEDDED
+      # YouTube now requires a signed-in account for playback. With an empty token, Lavalink
+      # starts the device login flow and prints the refresh token in its logs (use a burner account).
+      - PLUGINS_YOUTUBE_OAUTH_ENABLED=true
+      - PLUGINS_YOUTUBE_OAUTH_REFRESHTOKEN=${YOUTUBE_REFRESH_TOKEN:-}
+      # The plugin can no longer decipher stream signatures itself: delegate to yt-cipher.
+      # The password is sent as-is in the Authorization header, which yt-cipher checks against API_TOKEN.
+      - PLUGINS_YOUTUBE_REMOTECIPHER_URL=http://yt-cipher:8001
+      - PLUGINS_YOUTUBE_REMOTECIPHER_PASSWORD=${LAVALINK_PASSWORD}
+      - PLUGINS_YOUTUBE_REMOTECIPHER_USERAGENT=music-bot
+    depends_on:
+      - yt-cipher
+    healthcheck:
+      # /version needs the password; $$ stops Compose from expanding the variable itself.
+      test: ["CMD-SHELL", "wget -q -O /dev/null --header \"Authorization: $$LAVALINK_SERVER_PASSWORD\" http://127.0.0.1:2333/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # The first start downloads the YouTube plugin, which can take a while.
+      start_period: 120s
     volumes:
       - ./.docker-data/lavalink-plugins:/opt/Lavalink/plugins
+    networks:
+      - internal
+
+  # Signature deciphering server used by the Lavalink youtube plugin (https://github.com/kikkia/yt-cipher).
+  yt-cipher:
+    image: ghcr.io/kikkia/yt-cipher:master
+    container_name: music-bot_yt-cipher
+    environment:
+      - API_TOKEN=${LAVALINK_PASSWORD}
+      - OVERRIDE_PLAYER_VARIANT=IAS
     networks:
       - internal
 
