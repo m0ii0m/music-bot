@@ -30,6 +30,6 @@ Set `DISCORD_GUILD_ID` in dev so slash commands register on that one guild right
 - The Dockerfile runs `npm ci`, so `package-lock.json` must exist (and be committed for the CI build).
 - YouTube playback comes from the Lavalink `youtube-plugin`, configured through env vars in both compose files. Lavalink's built-in YouTube source is turned off. Keep the two compose files in sync when changing the plugin or Lavalink settings. Playback needs all three of these (since 2026-08, release 1.18.2 fails with "requires login" / "No supported audio streams" / "Must find sig function"):
   - a **snapshot build** of the plugin (`LAVALINK_PLUGINS_0_SNAPSHOT=true`) until a release newer than 1.18.2 ships;
-  - **OAuth** on a burner Google account, used only by the `TV` client, which must come before the other clients in `PLUGINS_YOUTUBE_CLIENTS_*`. The refresh token lives in `.env` as `YOUTUBE_REFRESH_TOKEN`. When it is empty, Lavalink logs a google.com/device code and then the new token;
+  - **OAuth** on a burner Google account, used only by the `TV` client, which must be the first playback-capable client in `PLUGINS_YOUTUBE_CLIENTS_*` (`MUSIC` is listed first but only searches; `TV` cannot search). The refresh token lives in `.env` as `YOUTUBE_REFRESH_TOKEN`. When it is empty, Lavalink logs a google.com/device code and then the new token;
   - the **`yt-cipher`** service (remote signature deciphering), reached on the internal network and protected by `LAVALINK_PASSWORD`.
 - `.gitattributes` forces LF line endings for all files.
