@@ -1,5 +1,5 @@
 import type { Client } from "discord.js";
-import { LavalinkManager } from "lavalink-client";
+import { LavalinkManager, type Player } from "lavalink-client";
 import { config } from "./config.js";
 import { formatDuration } from "./utils/format.js";
 
@@ -29,14 +29,42 @@ export function createLavalink(client: Client): LavalinkManager {
   );
   lavalink.nodeManager.on("error", (node, error) => console.error(`Lavalink node "${node.id}" error:`, error));
 
-  lavalink.on("trackStart", (player, track) => {
-    if (!track || !player.textChannelId) return;
+  const sendToTextChannel = (player: Player, content: string) => {
+    if (!player.textChannelId) return;
     const channel = client.channels.cache.get(player.textChannelId);
     if (!channel?.isSendable()) return;
-    channel
-      .send(`Now playing: **${track.info.title}** by ${track.info.author} (${formatDuration(track.info.duration)})`)
-      .catch((error) => console.error("Failed to send now playing message:", error));
+    channel.send(content).catch((error) => console.error("Failed to send message to the text channel:", error));
+  };
+
+  lavalink.on("trackStart", (player, track) => {
+    if (!track) return;
+    sendToTextChannel(
+      player,
+      `Now playing: **${track.info.title}** by ${track.info.author} (${formatDuration(track.info.duration)})`,
+    );
+  });
+
+  // autoSkip moves on to the next track by itself; these only tell the channel why a track was skipped.
+  lavalink.on("trackError", (player, track, payload) => {
+    const details = [payload.exception?.message, payload.exception?.cause, payload.error].filter(Boolean).join(" | ");
+    console.warn(`Track error on "${track?.info.title ?? "unknown"}": ${details}`);
+    sendToTextChannel(player, `Could not play **${track?.info.title ?? "this track"}**: ${describeTrackError(details)}`);
+  });
+
+  lavalink.on("trackStuck", (player, track, payload) => {
+    console.warn(`Track stuck on "${track?.info.title ?? "unknown"}" for ${payload.thresholdMs} ms`);
+    sendToTextChannel(player, `**${track?.info.title ?? "This track"}** stopped streaming, skipping it.`);
   });
 
   return lavalink;
+}
+
+function describeTrackError(details: string): string {
+  // The playback client (TV, with OAuth) only says "requires login" when the burner account is not
+  // age-verified, which in practice means an age-restricted video.
+  if (/requires login|confirm your age|age[- ]restricted/i.test(details)) {
+    return "YouTube requires a signed-in, age-verified account for this video (usually an age restriction).";
+  }
+  if (/unavailable|private video|removed/i.test(details)) return "the video is unavailable.";
+  return "playback failed on the audio server.";
 }
