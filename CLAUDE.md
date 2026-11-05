@@ -13,7 +13,7 @@ Discord music bot: TypeScript (ESM, Node >= 22.9) on discord.js v14, with audio 
 
 Running the bot outside Docker: Lavalink publishes no port in `docker-compose.yml`. Add a git-ignored `docker-compose.override.yml` that maps `127.0.0.1:2333:2333` on the `lavalink` service, run `docker compose up -d lavalink`, then `npm run dev`.
 
-Set `DISCORD_GUILD_ID` in dev so slash commands register on that one guild right away. Global registration can take up to an hour to show up.
+Set `DISCORD_GUILD_ID` in dev so slash commands register on that one guild right away. In that mode the bot also clears its global commands, otherwise Discord lists each command twice. Global registration can take up to an hour to show up.
 
 ## Architecture
 

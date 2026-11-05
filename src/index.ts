@@ -18,7 +18,9 @@ client.once(Events.ClientReady, async (readyClient) => {
   const body = [...commands.values()].map((command) => command.data.toJSON());
   if (config.guildId) {
     await readyClient.application.commands.set(body, config.guildId);
-    console.log(`Registered ${body.length} commands on guild ${config.guildId}`);
+    // Drop global commands left by an earlier run without DISCORD_GUILD_ID, or Discord lists every command twice.
+    await readyClient.application.commands.set([]);
+    console.log(`Registered ${body.length} commands on guild ${config.guildId} (global commands cleared)`);
   } else {
     await readyClient.application.commands.set(body);
     console.log(`Registered ${body.length} global commands`);
@@ -26,6 +28,21 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isAutocomplete()) {
+    if (!interaction.inCachedGuild()) return;
+    const command = commands.get(interaction.commandName);
+    if (!command?.autocomplete) return;
+    try {
+      await command.autocomplete(interaction, lavalink);
+    } catch (error) {
+      // 10062 "Unknown interaction": the search took longer than Discord's 3 s window, the user typed on.
+      if ((error as { code?: unknown }).code === 10062) return;
+      console.error(`Autocomplete error in /${interaction.commandName}:`, error);
+      if (!interaction.responded) await interaction.respond([]).catch(() => {});
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   if (!interaction.inCachedGuild()) {
     await interaction.reply({ content: "This bot only works in servers.", flags: MessageFlags.Ephemeral });
