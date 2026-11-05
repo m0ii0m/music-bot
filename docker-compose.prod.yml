@@ -17,7 +17,7 @@ services:
         condition: service_healthy
 
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4-alpine
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2-alpine
     container_name: music-bot_lavalink
     restart: unless-stopped
     user: "996:111"
@@ -63,12 +63,17 @@ services:
       start_period: 120s
     volumes:
       - /mnt/Stockage1/Ludovic/docker/data/music-bot/lavalink-plugins:/opt/Lavalink/plugins
+    tmpfs:
+      # /opt/Lavalink belongs to the image's own user: give the log folder to 996:111.
+      # Logs still go to stdout (docker logs).
+      - /opt/Lavalink/logs:uid=996,gid=111,size=64m
     networks:
       - internal
 
   # Signature deciphering server used by the Lavalink youtube plugin (https://github.com/kikkia/yt-cipher).
+  # No version tags upstream: pinned by digest on master.
   yt-cipher:
-    image: ghcr.io/kikkia/yt-cipher:master
+    image: ghcr.io/kikkia/yt-cipher:master@sha256:4c5ec381ff57336cfc24822d2b526a5ad7cd0171f61065a1bbc87bb736842449
     container_name: music-bot_yt-cipher
     restart: unless-stopped
     environment:
