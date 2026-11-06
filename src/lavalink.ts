@@ -38,6 +38,8 @@ export function createLavalink(client: Client): LavalinkManager {
 
   lavalink.on("trackStart", (player, track) => {
     if (!track) return;
+    // A looped track starts again after each play; only announce it the first time.
+    if (player.repeatMode === "track" && player.queue.previous[0]?.encoded === track.encoded) return;
     sendToTextChannel(
       player,
       `Now playing: **${track.info.title}** by ${track.info.author} (${formatDuration(track.info.duration)})`,

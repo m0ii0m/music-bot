@@ -1,3 +1,4 @@
+import { loop } from "./loop.js";
 import { pause } from "./pause.js";
 import { play } from "./play.js";
 import { queue } from "./queue.js";
@@ -7,5 +8,5 @@ import { stop } from "./stop.js";
 import type { Command } from "./types.js";
 
 export const commands = new Map<string, Command>(
-  [play, skip, stop, pause, resume, queue].map((command) => [command.data.name, command]),
+  [play, skip, stop, pause, resume, queue, loop].map((command) => [command.data.name, command]),
 );

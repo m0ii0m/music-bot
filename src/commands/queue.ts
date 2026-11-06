@@ -16,6 +16,7 @@ export const queue: Command = {
 
     const upcoming = player.queue.tracks;
     const lines = [`**Now playing:** ${current.info.title} (${formatDuration(current.info.duration)})`];
+    if (player.repeatMode !== "off") lines.push(`Loop: ${player.repeatMode === "track" ? "current track" : "whole queue"}`);
     if (upcoming.length > 0) {
       lines.push("", "**Up next:**");
       upcoming.slice(0, MAX_SHOWN).forEach((track, i) => {
