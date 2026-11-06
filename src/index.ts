@@ -2,6 +2,7 @@ import { Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
 import { commands } from "./commands/index.js";
 import { config } from "./config.js";
 import { createLavalink } from "./lavalink.js";
+import { bumpPanel, handlePlayerButton, isPlayerButton } from "./nowPlaying.js";
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
@@ -43,6 +44,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
+  if (interaction.isButton()) {
+    if (!interaction.inCachedGuild() || !isPlayerButton(interaction.customId)) return;
+    try {
+      await handlePlayerButton(interaction, lavalink);
+    } catch (error) {
+      console.error(`Error on button ${interaction.customId}:`, error);
+      const reply = { content: "Something went wrong with this button.", flags: MessageFlags.Ephemeral } as const;
+      // The button is acknowledged with deferUpdate: editReply would overwrite the panel itself.
+      if (interaction.deferred || interaction.replied) await interaction.followUp(reply).catch(() => {});
+      else await interaction.reply(reply).catch(() => {});
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   if (!interaction.inCachedGuild()) {
     await interaction.reply({ content: "This bot only works in servers.", flags: MessageFlags.Ephemeral });
@@ -54,6 +69,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   try {
     await command.execute(interaction, lavalink);
+    // A public reply lands under the "Now playing" panel: move the panel back to the bottom.
+    const player = lavalink.getPlayer(interaction.guildId);
+    if (player && (interaction.replied || interaction.deferred) && !interaction.ephemeral) {
+      bumpPanel(player, interaction.channelId);
+    }
   } catch (error) {
     console.error(`Error in /${interaction.commandName}:`, error);
     const content = "Something went wrong while running this command.";

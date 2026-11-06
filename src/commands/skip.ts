@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
+import { skipTrack } from "../utils/playback.js";
 import { getPlayerForMember } from "./guards.js";
 import type { Command } from "./types.js";
 
@@ -9,11 +10,7 @@ export const skip: Command = {
     const player = await getPlayerForMember(interaction, lavalink);
     if (!player) return;
 
-    if (player.queue.tracks.length === 0) {
-      await player.stopPlaying(false, false);
-      return interaction.reply("Skipped. The queue is now empty.");
-    }
-    await player.skip();
-    return interaction.reply("Skipped.");
+    const result = await skipTrack(player);
+    return interaction.reply(result === "emptied" ? "Skipped. The queue is now empty." : "Skipped.");
   },
 };

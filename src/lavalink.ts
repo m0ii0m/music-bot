@@ -1,7 +1,7 @@
 import type { Client } from "discord.js";
 import { LavalinkManager, type Player } from "lavalink-client";
 import { config } from "./config.js";
-import { formatDuration } from "./utils/format.js";
+import { setupNowPlaying } from "./nowPlaying.js";
 
 export function createLavalink(client: Client): LavalinkManager {
   const lavalink = new LavalinkManager({
@@ -36,15 +36,7 @@ export function createLavalink(client: Client): LavalinkManager {
     channel.send(content).catch((error) => console.error("Failed to send message to the text channel:", error));
   };
 
-  lavalink.on("trackStart", (player, track) => {
-    if (!track) return;
-    // A looped track starts again after each play; only announce it the first time.
-    if (player.repeatMode === "track" && player.queue.previous[0]?.encoded === track.encoded) return;
-    sendToTextChannel(
-      player,
-      `Now playing: **${track.info.title}** by ${track.info.author} (${formatDuration(track.info.duration)})`,
-    );
-  });
+  setupNowPlaying(client, lavalink);
 
   // autoSkip moves on to the next track by itself; these only tell the channel why a track was skipped.
   lavalink.on("trackError", (player, track, payload) => {

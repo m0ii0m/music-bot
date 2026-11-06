@@ -1,9 +1,9 @@
-import { type ChatInputCommandInteraction, MessageFlags } from "discord.js";
+import { MessageFlags, type RepliableInteraction } from "discord.js";
 import type { LavalinkManager, Player } from "lavalink-client";
 
 /** Returns the guild's player if the user is listening in the same voice channel, otherwise replies and returns null. */
 export async function getPlayerForMember(
-  interaction: ChatInputCommandInteraction<"cached">,
+  interaction: RepliableInteraction<"cached">,
   lavalink: LavalinkManager,
 ): Promise<Player | null> {
   const player = lavalink.getPlayer(interaction.guildId);
