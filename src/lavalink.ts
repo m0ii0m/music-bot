@@ -1,6 +1,7 @@
 import type { Client } from "discord.js";
 import { LavalinkManager, type Player } from "lavalink-client";
 import { config } from "./config.js";
+import { autoplayFunction } from "./utils/autoplay.js";
 import { setupNowPlaying } from "./nowPlaying.js";
 
 export function createLavalink(client: Client): LavalinkManager {
@@ -18,8 +19,12 @@ export function createLavalink(client: Client): LavalinkManager {
     playerOptions: {
       defaultSearchPlatform: "ytsearch",
       onDisconnect: { autoReconnect: false, destroyPlayer: true },
-      // Leave the voice channel after one minute without anything to play.
-      onEmptyQueue: { destroyAfterMs: 60_000 },
+      onEmptyQueue: {
+        // Leave the voice channel after one minute without anything to play.
+        destroyAfterMs: 60_000,
+        // Queues a similar track when AutoPlay is on (toggled from the panel).
+        autoPlayFunction: autoplayFunction,
+      },
     },
   });
 

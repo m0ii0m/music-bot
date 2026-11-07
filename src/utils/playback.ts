@@ -1,7 +1,15 @@
 import type { Player } from "lavalink-client";
+import { isAutoplayEnabled, queueRelatedTrack } from "./autoplay.js";
 
-/** Skips to the next track, or stops playing (staying in the channel) when nothing is queued. */
+/**
+ * Skips to the next track, or stops playing (staying in the channel) when nothing is queued.
+ * With AutoPlay on, an empty queue gets a similar track first, so skipping keeps the music going.
+ */
 export async function skipTrack(player: Player): Promise<"skipped" | "emptied"> {
+  const current = player.queue.current;
+  if (player.queue.tracks.length === 0 && current && isAutoplayEnabled(player)) {
+    await queueRelatedTrack(player, current).catch((error) => console.error("AutoPlay failed:", error));
+  }
   if (player.queue.tracks.length === 0) {
     await player.stopPlaying(false, false);
     return "emptied";

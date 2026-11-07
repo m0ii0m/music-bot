@@ -21,6 +21,7 @@ import {
 } from "discord.js";
 import type { LavalinkManager, Player, RepeatMode, Track } from "lavalink-client";
 import { getPlayerForMember } from "./commands/guards.js";
+import { isAutoplayEnabled, isAutoplayTrack, setAutoplay } from "./utils/autoplay.js";
 import { playPrevious, skipTrack } from "./utils/playback.js";
 import { renderProgressImage } from "./utils/progressImage.js";
 
@@ -38,6 +39,7 @@ const BUTTONS = {
   next: `${BUTTON_PREFIX}next`,
   stop: `${BUTTON_PREFIX}stop`,
   loop: `${BUTTON_PREFIX}loop`,
+  autoplay: `${BUTTON_PREFIX}autoplay`,
 } as const;
 const COLORS = { playing: 0x9b87f5, paused: 0xfaa61a, finished: 0x4f545c } as const;
 const PROGRESS_FILE = "progress.png";
@@ -204,6 +206,7 @@ function renderPanel(player: Player) {
   const details: string[] = [];
   const requester = requesterId(track);
   if (requester) details.push(`- Added by <@${requester}>`);
+  else if (isAutoplayTrack(track)) details.push("- Added by 📻 AutoPlay");
   if (player.voiceChannelId) details.push(`- 🔊 <#${player.voiceChannelId}>`);
   addTrackInfo(container, track, details);
 
@@ -211,6 +214,7 @@ function renderPanel(player: Player) {
     `Queue: \`${player.queue.tracks.length}\``,
     `Volume: \`${player.volume}%\``,
     `Loop: \`${REPEAT_LABELS[player.repeatMode]}\``,
+    `AutoPlay: \`${isAutoplayEnabled(player) ? "On" : "Off"}\``,
   ].join(" · ");
   container.addSectionComponents(
     new SectionBuilder()
@@ -260,6 +264,11 @@ function renderPanel(player: Player) {
         .setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(BUTTONS.next).setEmoji("⏭️").setLabel("Skip").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(BUTTONS.stop).setEmoji("⏹️").setLabel("Stop").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(BUTTONS.autoplay)
+        .setEmoji("📻")
+        .setLabel("AutoPlay")
+        .setStyle(isAutoplayEnabled(player) ? ButtonStyle.Primary : ButtonStyle.Secondary),
     ),
   );
 
@@ -331,6 +340,11 @@ export async function handlePlayerButton(interaction: ButtonInteraction<"cached"
       break;
     case BUTTONS.loop:
       await player.setRepeatMode(NEXT_REPEAT_MODE[player.repeatMode]);
+      break;
+    case BUTTONS.autoplay:
+      setAutoplay(player, !isAutoplayEnabled(player));
+      // Player data is not a Lavalink update, so no playerClientUpdate redraws the panel.
+      refreshPanel(player);
       break;
     case BUTTONS.stop:
       // Same as /stop: playerDestroy turns the panel into its "Finished" state.
