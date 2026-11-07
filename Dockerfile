@@ -12,5 +12,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
+# Font used to draw the progress bar image (the Alpine image has none).
+COPY assets ./assets
 USER node
 CMD ["node", "dist/index.js"]
